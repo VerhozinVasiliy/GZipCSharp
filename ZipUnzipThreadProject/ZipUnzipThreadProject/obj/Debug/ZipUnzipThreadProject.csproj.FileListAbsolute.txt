@@ -12,3 +12,10 @@ E:\projects\ZipUnzipThreadProject\ZipUnzipThreadProject\obj\Debug\ZipUnzipThread
 E:\projects\ZipUnzipThreadProject\ZipUnzipThreadProject\obj\Debug\ZipUnzipThreadProject.csproj.CoreCompileInputs.cache
 E:\projects\ZipUnzipThreadProject\ZipUnzipThreadProject\obj\Debug\ZipUnzipThreadProject.exe
 E:\projects\ZipUnzipThreadProject\ZipUnzipThreadProject\obj\Debug\ZipUnzipThreadProject.pdb
+E:\projects\GitHub\GZipConsole\ZipUnzipThreadProject\ZipUnzipThreadProject\bin\Debug\ZipUnzipThreadProject.exe.config
+E:\projects\GitHub\GZipConsole\ZipUnzipThreadProject\ZipUnzipThreadProject\bin\Debug\ZipUnzipThreadProject.exe
+E:\projects\GitHub\GZipConsole\ZipUnzipThreadProject\ZipUnzipThreadProject\bin\Debug\ZipUnzipThreadProject.pdb
+E:\projects\GitHub\GZipConsole\ZipUnzipThreadProject\ZipUnzipThreadProject\obj\Debug\ZipUnzipThreadProject.csprojAssemblyReference.cache
+E:\projects\GitHub\GZipConsole\ZipUnzipThreadProject\ZipUnzipThreadProject\obj\Debug\ZipUnzipThreadProject.csproj.CoreCompileInputs.cache
+E:\projects\GitHub\GZipConsole\ZipUnzipThreadProject\ZipUnzipThreadProject\obj\Debug\ZipUnzipThreadProject.exe
+E:\projects\GitHub\GZipConsole\ZipUnzipThreadProject\ZipUnzipThreadProject\obj\Debug\ZipUnzipThreadProject.pdb

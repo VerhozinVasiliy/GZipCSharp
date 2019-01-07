@@ -5,7 +5,7 @@ using ZipUnzipThreadProject.ParsingCommands;
 
 namespace ZipUnzipThreadProject
 {
-    public class Program
+    public static class Program
     {
         static void Main(string[] args)
         {
@@ -19,7 +19,8 @@ namespace ZipUnzipThreadProject
                 return;
             }
 
-            if (!File.Exists(AppPropertiesSingle.GetInstance().InFilePath))
+            var appProp = AppPropertiesSingle.GetInstance();
+            if (!File.Exists(appProp.InFilePath))
             {
                 Console.WriteLine("Ошибка: входящий файл не корректен!");
                 return;
@@ -28,40 +29,44 @@ namespace ZipUnzipThreadProject
             // таймер процесса
             var sw = new Stopwatch();
             sw.Start();
-            
+
+            // выбор стратегии в зависимости от команды
+            ICutting cutFile;
+            IArchiveProcessing archiveProcess;
+
+            switch (command)
+            {
+                case CommamdsEnum.Compress:
+                    cutFile = new CutInPiecesNormal();
+                    archiveProcess = new ProcessPacking();
+                    break;
+                case CommamdsEnum.Decompress:
+                    cutFile = new CutInPiecesCompressed();
+                    archiveProcess = new ProcessUnPacking();
+                    break;
+                default:
+                    Console.WriteLine("До свидания! Приходите ещё!");
+                    return;
+            }
+
+            var fassade = new LogicFassade(cutFile, archiveProcess);
+
             Console.WriteLine("Разрежем файл на кусочки...");
-            // разрежем файл на кусочки
-            var inFileQueue = new QueueOfParts();
-            var cut = new CutUpTheFile(AppPropertiesSingle.GetInstance().InFilePath, inFileQueue);
-            cut.Cut();
+            fassade.CutInPieces();
             var ts = sw.Elapsed;
             var elapsedTime = $"{ts.Hours:00}:{ts.Minutes:00}:{ts.Seconds:00}.{ts.Milliseconds / 10:00}";
             Console.WriteLine(elapsedTime);
 
-
-            // запуск обнаруженной команды
             // упаковка/распаковка кусочков
-            var proccesedQueue = new QueueOfParts();
-            ProcessPackingAbstract pack;
-            if (command == CommamdsEnum.Compress)
-            {
-                Console.Write("Процесс архивации...");
-                pack = new PackPieces(inFileQueue.PieceList, proccesedQueue);
-            }
-            else
-            {
-                Console.Write("Процесс разархивации...");
-                pack = new UnpackPieces(inFileQueue.PieceList, proccesedQueue);
-            }
-            pack.ProcessPacking();
+            Console.WriteLine("Работа с архивацией/разархивацией кусочков...");
+            fassade.ArchiveProcess();
             ts = sw.Elapsed;
             elapsedTime = $"{ts.Hours:00}:{ts.Minutes:00}:{ts.Seconds:00}.{ts.Milliseconds / 10:00}";
             Console.WriteLine(elapsedTime);
 
             // собрать файл
             Console.WriteLine("Собираем файл после процесса...");
-            var bringTogether = new BringTogether(proccesedQueue.PieceList, AppPropertiesSingle.GetInstance().OutFilePath);
-            bringTogether.Collect();
+            fassade.BringUpFile();
 
             // таймер: диагностика выполнения
             Console.WriteLine("Процесс успешно завершен. Диагностика выполнения:");

@@ -43,13 +43,14 @@
   <ItemGroup>
     <Compile Include="AppPropertiesSingle.cs" />
     <Compile Include="BringTogether.cs" />
-    <Compile Include="CutUpTheFile.cs" />
+    <Compile Include="CutInPieces.cs" />
     <Compile Include="FilePiece.cs" />
     <Compile Include="IAddablePieces.cs" />
+    <Compile Include="LogicFassade.cs" />
     <Compile Include="ParsingCommands\ParsingInputParameters.cs" />
     <Compile Include="ParsingCommands\DialogWithUser.cs" />
     <Compile Include="ProcessingTemplate.cs" />
-    <Compile Include="ProcessPackingAbstract.cs" />
+    <Compile Include="IArchiveProcessing.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="QueueOfParts.cs" />
