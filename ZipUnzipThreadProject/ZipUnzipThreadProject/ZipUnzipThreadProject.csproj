@@ -41,22 +41,21 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AppPropertiesSingle.cs" />
-    <Compile Include="BringTogether.cs" />
-    <Compile Include="CutInPieces.cs" />
-    <Compile Include="FilePiece.cs" />
-    <Compile Include="IAddablePieces.cs" />
-    <Compile Include="LogicFassade.cs" />
-    <Compile Include="ParsingCommands\ParsingInputParameters.cs" />
-    <Compile Include="ParsingCommands\DialogWithUser.cs" />
-    <Compile Include="ProcessingTemplate.cs" />
-    <Compile Include="IArchiveProcessing.cs" />
+    <Compile Include="CheckFiles.cs" />
+    <Compile Include="ChooseStrategy.cs" />
+    <Compile Include="ParsingInputParameters.cs" />
+    <Compile Include="DialogWithUser.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="QueueOfParts.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GZipLibrary\GZipLibrary.csproj">
+      <Project>{c730d47d-8e3e-48a7-a7e2-72e5b2534519}</Project>
+      <Name>GZipLibrary</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

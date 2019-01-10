@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.27428.2015
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZipUnzipThreadProject", "ZipUnzipThreadProject\ZipUnzipThreadProject.csproj", "{F45FD0BC-3D06-4D88-99EE-767A75A8B609}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GZipLibrary", "GZipLibrary\GZipLibrary.csproj", "{C730D47D-8E3E-48A7-A7E2-72E5B2534519}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{F45FD0BC-3D06-4D88-99EE-767A75A8B609}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F45FD0BC-3D06-4D88-99EE-767A75A8B609}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F45FD0BC-3D06-4D88-99EE-767A75A8B609}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C730D47D-8E3E-48A7-A7E2-72E5B2534519}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C730D47D-8E3E-48A7-A7E2-72E5B2534519}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C730D47D-8E3E-48A7-A7E2-72E5B2534519}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C730D47D-8E3E-48A7-A7E2-72E5B2534519}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
