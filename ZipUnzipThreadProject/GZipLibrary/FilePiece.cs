@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Security.Cryptography;
 
 namespace GZipLibrary
 {
@@ -16,14 +15,7 @@ namespace GZipLibrary
         public byte[] GetContent()
         {
             var app = AppPropertiesSingle.GetInstance();
-            if (app.IsBigFile)
-            {
-                using (var reader = new BinaryReader(new FileStream(m_FilePath, FileMode.Open, FileAccess.Read)))
-                {
-                    return reader.ReadBytes(BlockSize);
-                }
-            }
-            return m_Content;
+            return app.IsBigFile ? File.ReadAllBytes(m_FilePath) : m_Content;
         }
         public int BlockSize { get; }
         public int OutSize {  get; }
@@ -52,11 +44,7 @@ namespace GZipLibrary
             var randomFileName = Path.GetRandomFileName();
             randomFileName = DateTime.Now.Millisecond + randomFileName;
             m_FilePath = Path.Combine(app.TempPath, randomFileName);
-            using (var outFile = new FileStream(m_FilePath, FileMode.Create))
-            {
-                outFile.Write(fileBytes, 0, fileBytes.Length);
-            }
-            //File.WriteAllBytes(m_FilePath, fileBytes);
+            File.WriteAllBytes(m_FilePath, fileBytes);
         }
 
         public void CleanContent()

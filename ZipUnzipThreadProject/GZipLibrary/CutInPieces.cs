@@ -78,15 +78,12 @@ namespace GZipLibrary
                 thread.Join();
             }
 
-            var pieceNumber = 0;
-
             //складываем все кусочки в кучу
             foreach (var pieceListFromThread in m_ThreadPieceList)
             {
                 foreach (var filePiece in pieceListFromThread)
                 {
-                    mQueeue.Add(new FilePiece(pieceNumber, filePiece.GetContent(), filePiece.BlockSize, filePiece.OutSize));
-                    pieceNumber++;
+                    mQueeue.Add(filePiece);
                 }
             }
         }
@@ -111,7 +108,8 @@ namespace GZipLibrary
                     buffer.CopyTo(comressedBytes, 0);
                     reader.Read(comressedBytes, 8, compressedBlockLength - 8);
                     var blockSize = BitConverter.ToInt32(comressedBytes, compressedBlockLength - 4);
-                    outList.Add(new FilePiece(counter, comressedBytes, comressedBytes.Length, blockSize));
+                    var uncompressedBytes = ProcessUnPacking.ProcessArchive(comressedBytes, blockSize);
+                    outList.Add(new FilePiece(counter, uncompressedBytes, uncompressedBytes.Length, blockSize));
                     counter++;
                     long ps = counter * 100 / inList.Count;
                     if (ps != oldPs)
@@ -144,7 +142,7 @@ namespace GZipLibrary
 
             var info = new FileInfo(mFilePath);
             var fileLength = info.Length;
-            m_StreamLength = int.Parse((fileLength / prCount).ToString()) + 100;
+            m_StreamLength = long.Parse((fileLength / prCount).ToString()) + 100;
 
             // параллелим процесс
             int pathsCount = prCount;
@@ -170,15 +168,12 @@ namespace GZipLibrary
                 thread.Join();
             }
 
-            var pieceNumber = 0;
-
             //складываем все кусочки в кучу
             foreach (var pieceListFromThread in m_ThreadPieceList)
             {
                 foreach (var filePiece in pieceListFromThread)
                 {
-                    mQueeue.Add(new FilePiece(pieceNumber, filePiece.GetContent(), filePiece.BlockSize, filePiece.OutSize));
-                    pieceNumber++;
+                    mQueeue.Add(filePiece);
                 }
             }
         }
@@ -193,8 +188,8 @@ namespace GZipLibrary
             long endPos = cursorPos + m_StreamLength;
             using (var reader = new BinaryReader(new FileStream(m_FilePath, FileMode.Open, FileAccess.Read)))
             {
-                int counter = 0;
-                var BUFFER_SIZE = AppPropertiesSingle.GetInstance().m_BufferSize;
+                long counter = 0;
+                long BUFFER_SIZE = (long)AppPropertiesSingle.GetInstance().m_BufferSize;
                 long oldPs = 0;
                 while (reader.BaseStream.Position < reader.BaseStream.Length)
                 {
@@ -215,8 +210,9 @@ namespace GZipLibrary
                     {
                         bufferSize = (int)(endPos - offset);
                     }
-                    var arBytes = reader.ReadBytes(bufferSize);
-                    threadPieceList.Add(new FilePiece(counter, arBytes, arBytes.Length, 0));
+                    var arBytes = reader.ReadBytes((int)bufferSize);
+                    var compBytes = ProcessPacking.ProcessArchive(arBytes);
+                    threadPieceList.Add(new FilePiece(counter, compBytes, compBytes.Length, 0));
                     counter++;
                 }
             }
@@ -241,7 +237,8 @@ namespace GZipLibrary
                         bufferSize = (int)(reader.BaseStream.Length - reader.BaseStream.Position);
                     }
                     var arBytes = reader.ReadBytes(bufferSize);
-                    mQueeue.Add(new FilePiece(counter, arBytes, arBytes.Length, 0));
+                    var compressedBytes = ProcessPacking.ProcessArchive(arBytes);
+                    mQueeue.Add(new FilePiece(counter, compressedBytes, compressedBytes.Length, 0));
                     counter++;
                     long ps = reader.BaseStream.Position * 100 / reader.BaseStream.Length;
                     if (ps != oldPs)
@@ -276,7 +273,8 @@ namespace GZipLibrary
                     buffer.CopyTo(comressedBytes, 0);
                     reader.Read(comressedBytes, 8, compressedBlockLength - 8);
                     var blockSize = BitConverter.ToInt32(comressedBytes, compressedBlockLength - 4);
-                    mQueeue.Add(new FilePiece(counter, comressedBytes, comressedBytes.Length, blockSize));
+                    var decompressedBytes = ProcessUnPacking.ProcessArchive(comressedBytes, blockSize);
+                    mQueeue.Add(new FilePiece(counter, decompressedBytes, decompressedBytes.Length, blockSize));
                     counter++;
                     long ps = reader.Position * 100 / reader.Length;
                     if (ps != oldPs)

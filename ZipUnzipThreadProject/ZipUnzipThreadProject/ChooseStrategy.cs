@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using GZipLibrary;
+﻿using GZipLibrary;
 
 namespace ZipUnzipThreadProject
 {
@@ -19,7 +15,6 @@ namespace ZipUnzipThreadProject
         }
 
         public ICutting CutFile { get; private set; }
-        public IArchiveProcessing ArchiveProcess { get; private set; }
         public ICollecting Collecting { get; private set; }
 
         public void Choose()
@@ -45,7 +40,6 @@ namespace ZipUnzipThreadProject
                     {
                         CutFile = new CutInPiecesNormalOneThread();
                     }
-                    ArchiveProcess = new ProcessPacking();
                     break;
                 case CommamdsEnum.Decompress:
                     if (appProp.IsBigFile)
@@ -56,7 +50,6 @@ namespace ZipUnzipThreadProject
                     {
                         CutFile = new CutInPiecesCompressedOneThread();
                     }
-                    ArchiveProcess = new ProcessUnPacking();
                     break;
             }
         }

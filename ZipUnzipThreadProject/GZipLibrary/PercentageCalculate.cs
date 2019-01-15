@@ -15,8 +15,8 @@ namespace GZipLibrary
             }
 
             return //percentList.Min();
-                (percentList.Max() + percentList.Min()) / 2;
-                //(long) percentList.Average();
+                //(percentList.Max() + percentList.Min()) / 2;
+                (long) percentList.Average();
         }
     }
 }

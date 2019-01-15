@@ -35,35 +35,29 @@ namespace ZipUnzipThreadProject
             // выбор стратегии в зависимости от команды
             var cs = new ChooseStrategy(command);
             cs.Choose();
-            var fassade = new LogicFassade(cs.CutFile, cs.ArchiveProcess, cs.Collecting);
+            var fassade = new LogicFassade(cs.CutFile, cs.Collecting);
             // сообщения о прогрессе
             cs.CutFile.NotifyProgress += NotifyProgress;
-            cs.ArchiveProcess.NotifyProgress += NotifyProgress;
             cs.Collecting.NotifyProgress += NotifyProgress;
 
             var appProp = AppPropertiesSingle.GetInstance();
             Console.WriteLine("Работаю с файлом {0}", appProp.InFilePath);
-            Console.WriteLine("Разрежем файл на кусочки...");
-            CleanTemp(false);
-            fassade.CutInPieces();
-            NotificTime(sw.Elapsed);
-            GC.Collect();
-            
-            // упаковка/распаковка кусочков
             switch (command)
             {
                 case CommamdsEnum.Compress:
-                    Console.WriteLine("Архивация кусочков...");
+                    Console.WriteLine("Разрежем файл на кусочки, архивация кусочков...");
                     break;
                 case CommamdsEnum.Decompress:
-                    Console.WriteLine("Разархивация кусочков...");
+                    Console.WriteLine("Разрежем файл на кусочки, разархивация кусочков...");
                     break;
                 default:
                     Console.WriteLine("Идет какойто непонятный процесс...");
                     break;
             }
-            fassade.ArchiveProcess();
+            CleanTemp(false);
+            fassade.CutInPieces();
             NotificTime(sw.Elapsed);
+            GC.Collect();
 
             // собрать файл
             Console.WriteLine("Собираем файл после процесса...");
@@ -79,10 +73,6 @@ namespace ZipUnzipThreadProject
             Console.ReadKey();
         }
 
-        /// <summary>
-        /// обработчик для показа прогресса исполнения из бизнес-логики
-        /// </summary>
-        /// <param name="message"></param>
         private static void NotifyProgress(string message)
         {
             Console.Write("\r");
@@ -93,10 +83,6 @@ namespace ZipUnzipThreadProject
             Console.Write("\r{0}%", message);
         }
 
-        /// <summary>
-        /// показать сколько времени прошло после выполнения функции
-        /// </summary>
-        /// <param name="ts"></param>
         private static void NotificTime(TimeSpan ts)
         {
             Console.Write("\r");
@@ -109,9 +95,6 @@ namespace ZipUnzipThreadProject
             Console.WriteLine("Прошло времени " + elapsedTime);
         }
 
-        /// <summary>
-        /// зададим начальные параметры
-        /// </summary>
         private static void SetParams()
         {
             var prop = AppPropertiesSingle.GetInstance();
@@ -121,9 +104,6 @@ namespace ZipUnzipThreadProject
             prop.SetProcessorCount(Environment.ProcessorCount);
         }
 
-        /// <summary>
-        /// немного приберемся после выполнения
-        /// </summary>
         private static void CleanTemp(bool deleteTempDir = true)
         {
             var app = AppPropertiesSingle.GetInstance();
