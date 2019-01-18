@@ -15,12 +15,119 @@ namespace GZipLibrary
     }
 
     /// <summary>
+    /// разрежем файлик для архивации
+    /// </summary>
+    public class CutInPiecesNormal : ICutting
+    {
+        private List<FilePiece> m_ThreadPieceList;
+
+        private readonly ThreadSafeList<long> m_ProgressList = new ThreadSafeList<long>();
+
+        private long m_StreamLength;
+        private string m_FilePath;
+
+        public void Cut(string mFilePath, List<FilePiece> mQueeue)
+        {
+            m_ThreadPieceList = mQueeue;
+            m_FilePath = mFilePath;
+            // разрежем файл на части, чтобы распараллелить процесс разрезания на кусочки
+            var app = AppPropertiesSingle.GetInstance();
+            var prCount = app.ProcessorCount;
+
+            var info = new FileInfo(mFilePath);
+            var fileLength = info.Length;
+            m_StreamLength = long.Parse((fileLength / prCount).ToString()) + 100;
+
+            // параллелим процесс
+            int pathsCount = prCount;
+            for (int i = 0; i < prCount; i++)
+            {
+                m_ThreadPieceList.Add(new FilePiece(""));
+                m_ProgressList.Add(1);
+            }
+            var threadList = new List<Thread>();
+            for (int i = 0; i < pathsCount; i++)
+            {
+                threadList.Add(new Thread(CutPath));
+                threadList[i].IsBackground = true;
+                threadList[i].Start(i);
+            }
+            while (threadList.Any(w => w.IsAlive))
+            {
+                NotifyProgress?.Invoke(PercentageCalculate.GetPercentAverage(m_ProgressList).ToString());
+                Thread.Sleep(100);
+            }
+            foreach (var thread in threadList)
+            {
+                thread.Join();
+            }
+        }
+
+        public event NotifyProgressHandler NotifyProgress;
+
+        private void CutPath(object o)
+        {
+            // индекс потока
+            int index = (int)o;
+
+            // файл, чтобы складывать все с потока
+            var filePath = AppPropertiesSingle.GetInstance().TempPath;
+            var tempFileName = index + Path.GetRandomFileName();
+            filePath = Path.Combine(filePath, tempFileName);
+            
+            // позиция курсора и конец отрезка в зависимости от идекса потока
+            long cursorPos = m_StreamLength * index;
+            long endPos = cursorPos + m_StreamLength;
+            using (var reader = new BinaryReader(new FileStream(m_FilePath, FileMode.Open, FileAccess.Read)))
+            {
+                long BUFFER_SIZE = (long)AppPropertiesSingle.GetInstance().m_BufferSize;
+
+                // для расчета прогресса
+                long counter = 0;
+                long oldPs = 0;
+
+                // создаем файлик для записи
+                using (var bw = new BinaryWriter(new FileStream(filePath, FileMode.Create)))
+                {
+                    while (reader.BaseStream.Position < reader.BaseStream.Length)
+                    {
+                        long offset = cursorPos + counter * BUFFER_SIZE;
+                        var ps = (offset - cursorPos) * 100 / (endPos - cursorPos);
+                        if (ps != oldPs)
+                        {
+                            m_ProgressList[index] = ps;
+                        }
+                        if (offset > endPos)
+                        {
+                            break;
+                        }
+                        reader.BaseStream.Seek(offset, SeekOrigin.Begin);
+                        var bufferSize = BUFFER_SIZE;
+                        var nextoffset = cursorPos + (counter + 1) * BUFFER_SIZE;
+                        if (nextoffset > endPos)
+                        {
+                            bufferSize = (int)(endPos - offset);
+                        }
+                        var arBytes = reader.ReadBytes((int)bufferSize);
+
+                        // заархивируем считанный кусочек
+                        var compBytes = ProcessPacking.ProcessArchive(arBytes);
+                        bw.Write(compBytes);
+                        counter++;
+                    }
+                }
+                m_ThreadPieceList[index] = new FilePiece(filePath);
+            }
+        }
+    }
+
+    /// <summary>
     /// разрежем файлик для разархивации
     /// </summary>
     public class CutInPiecesCompressed : ICutting
     {
         private List<List<long>> m_AnchorListThread;
-        private readonly List<List<FilePiece>> m_ThreadPieceList = new List<List<FilePiece>>();
+        private List<FilePiece> m_ThreadPieceList;
         private string m_FilePath;
 
         public event NotifyProgressHandler NotifyProgress;
@@ -28,6 +135,7 @@ namespace GZipLibrary
 
         public void Cut(string mFilePath, List<FilePiece> mQueeue)
         {
+            m_ThreadPieceList = mQueeue;
             m_FilePath = mFilePath;
             // найдем все якоря, чтобы потом считывать инфу в потоках
             var anchorList = new List<long>();
@@ -57,7 +165,7 @@ namespace GZipLibrary
             // параллелим процесс
             foreach (var unused in m_AnchorListThread)
             {
-                m_ThreadPieceList.Add(new List<FilePiece>());
+                m_ThreadPieceList.Add(new FilePiece(""));
                 m_ProgressList.Add(1);
             }
             int pathsCount = m_AnchorListThread.Count;
@@ -77,143 +185,55 @@ namespace GZipLibrary
             {
                 thread.Join();
             }
-
-            //складываем все кусочки в кучу
-            foreach (var pieceListFromThread in m_ThreadPieceList)
-            {
-                foreach (var filePiece in pieceListFromThread)
-                {
-                    mQueeue.Add(filePiece);
-                }
-            }
         }
 
         private void CutPath(object o)
         {
+            // индекс потока
             int index = (int)o;
-            var outList = m_ThreadPieceList[index];
             var inList = m_AnchorListThread[index];
 
+            // файл, чтобы складывать все с потока
+            var filePath = AppPropertiesSingle.GetInstance().TempPath;
+            var tempFileName = index + Path.GetRandomFileName();
+            filePath = Path.Combine(filePath, tempFileName);
+            
             using (var reader = new FileStream(m_FilePath, FileMode.Open, FileAccess.Read))
             {
+                // для расчета прогресса
                 long counter = 0;
                 long oldPs = 0;
-                foreach (var anchor in inList)
+
+                // создаем файлик для записи
+                using (var bw = new BinaryWriter(new FileStream(filePath, FileMode.Create)))
                 {
-                    reader.Seek(anchor, SeekOrigin.Begin);
-                    var buffer = new byte[8];
-                    reader.Read(buffer, 0, 8);
-                    var compressedBlockLength = BitConverter.ToInt32(buffer, 4);
-                    var comressedBytes = new byte[compressedBlockLength + 1];
-                    buffer.CopyTo(comressedBytes, 0);
-                    reader.Read(comressedBytes, 8, compressedBlockLength - 8);
-                    var blockSize = BitConverter.ToInt32(comressedBytes, compressedBlockLength - 4);
-                    var uncompressedBytes = ProcessUnPacking.ProcessArchive(comressedBytes, blockSize);
-                    outList.Add(new FilePiece(counter, uncompressedBytes, uncompressedBytes.Length, blockSize));
-                    counter++;
-                    long ps = counter * 100 / inList.Count;
-                    if (ps != oldPs)
+                    foreach (var anchor in inList)
                     {
-                        m_ProgressList[index] = ps;
+                        // считаем порцию байт (найдем размер порции и саму её по якорям)
+                        reader.Seek(anchor, SeekOrigin.Begin);
+                        var buffer = new byte[8];
+                        reader.Read(buffer, 0, 8);
+                        var compressedBlockLength = BitConverter.ToInt32(buffer, 4);
+                        var comressedBytes = new byte[compressedBlockLength + 1];
+                        buffer.CopyTo(comressedBytes, 0);
+                        reader.Read(comressedBytes, 8, compressedBlockLength - 8);
+                        var blockSize = BitConverter.ToInt32(comressedBytes, compressedBlockLength - 4);
+                        
+                        // разархивируем файл
+                        var uncompressedBytes = ProcessUnPacking.ProcessArchive(comressedBytes, blockSize);
+
+                        // запишем во временный файл
+                        bw.Write(uncompressedBytes);
+
+                        // расчет прогресса
+                        counter++;
+                        long ps = counter * 100 / inList.Count;
+                        if (ps != oldPs)
+                        {
+                            m_ProgressList[index] = ps;
+                        }
                     }
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// разрежем файлик для архивации
-    /// </summary>
-    public class CutInPiecesNormal : ICutting
-    {
-        private readonly List<List<FilePiece>> m_ThreadPieceList = new List<List<FilePiece>>();
-
-        private readonly ThreadSafeList<long> m_ProgressList = new ThreadSafeList<long>();
-
-        private long m_StreamLength;
-        private string m_FilePath;
-
-        public void Cut(string mFilePath, List<FilePiece> mQueeue)
-        {
-            m_FilePath = mFilePath;
-            // разрежем файл на части, чтобы распараллелить процесс разрезания на кусочки
-            var app = AppPropertiesSingle.GetInstance();
-            var prCount = app.ProcessorCount;
-
-            var info = new FileInfo(mFilePath);
-            var fileLength = info.Length;
-            m_StreamLength = long.Parse((fileLength / prCount).ToString()) + 100;
-
-            // параллелим процесс
-            int pathsCount = prCount;
-            for (int i = 0; i < prCount; i++)
-            {
-                m_ThreadPieceList.Add(new List<FilePiece>());
-                m_ProgressList.Add(1);
-            }
-            var threadList = new List<Thread>();
-            for (int i = 0; i < pathsCount; i++)
-            {
-                threadList.Add(new Thread(CutPath));   
-                threadList[i].IsBackground = true;
-                threadList[i].Start(i);
-            }
-            while (threadList.Any(w=>w.IsAlive))
-            {
-                NotifyProgress?.Invoke(PercentageCalculate.GetPercentAverage(m_ProgressList).ToString());
-                Thread.Sleep(100);
-            }
-            foreach (var thread in threadList)
-            {
-                thread.Join();
-            }
-
-            //складываем все кусочки в кучу
-            foreach (var pieceListFromThread in m_ThreadPieceList)
-            {
-                foreach (var filePiece in pieceListFromThread)
-                {
-                    mQueeue.Add(filePiece);
-                }
-            }
-        }
-
-        public event NotifyProgressHandler NotifyProgress;
-
-        private void CutPath(object o)
-        {
-            int index = (int)o;
-            var threadPieceList = m_ThreadPieceList[index];
-            long cursorPos = m_StreamLength * index;
-            long endPos = cursorPos + m_StreamLength;
-            using (var reader = new BinaryReader(new FileStream(m_FilePath, FileMode.Open, FileAccess.Read)))
-            {
-                long counter = 0;
-                long BUFFER_SIZE = (long)AppPropertiesSingle.GetInstance().m_BufferSize;
-                long oldPs = 0;
-                while (reader.BaseStream.Position < reader.BaseStream.Length)
-                {
-                    long offset = cursorPos + counter * BUFFER_SIZE;
-                    var ps = (offset - cursorPos) * 100 / (endPos - cursorPos);
-                    if (ps != oldPs)
-                    {
-                        m_ProgressList[index] = ps;
-                    }
-                    if (offset > endPos)
-                    {
-                        break;
-                    }
-                    reader.BaseStream.Seek(offset, SeekOrigin.Begin);
-                    var bufferSize = BUFFER_SIZE;
-                    var nextoffset = cursorPos + (counter + 1) * BUFFER_SIZE;
-                    if (nextoffset > endPos)
-                    {
-                        bufferSize = (int)(endPos - offset);
-                    }
-                    var arBytes = reader.ReadBytes((int)bufferSize);
-                    var compBytes = ProcessPacking.ProcessArchive(arBytes);
-                    threadPieceList.Add(new FilePiece(counter, compBytes, compBytes.Length, 0));
-                    counter++;
+                    m_ThreadPieceList[index] = new FilePiece(filePath);
                 }
             }
         }
@@ -238,7 +258,7 @@ namespace GZipLibrary
                     }
                     var arBytes = reader.ReadBytes(bufferSize);
                     var compressedBytes = ProcessPacking.ProcessArchive(arBytes);
-                    mQueeue.Add(new FilePiece(counter, compressedBytes, compressedBytes.Length, 0));
+                    mQueeue.Add(new FilePiece(counter, compressedBytes));
                     counter++;
                     long ps = reader.BaseStream.Position * 100 / reader.BaseStream.Length;
                     if (ps != oldPs)
@@ -274,7 +294,7 @@ namespace GZipLibrary
                     reader.Read(comressedBytes, 8, compressedBlockLength - 8);
                     var blockSize = BitConverter.ToInt32(comressedBytes, compressedBlockLength - 4);
                     var decompressedBytes = ProcessUnPacking.ProcessArchive(comressedBytes, blockSize);
-                    mQueeue.Add(new FilePiece(counter, decompressedBytes, decompressedBytes.Length, blockSize));
+                    mQueeue.Add(new FilePiece(counter, decompressedBytes));
                     counter++;
                     long ps = reader.Position * 100 / reader.Length;
                     if (ps != oldPs)

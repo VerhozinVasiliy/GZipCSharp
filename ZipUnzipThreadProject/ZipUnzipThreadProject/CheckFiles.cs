@@ -115,6 +115,12 @@ namespace ZipUnzipThreadProject
         private bool CheckOutFile()
         {
             var app = AppPropertiesSingle.GetInstance();
+
+            if (File.Exists(app.OutFilePath))
+            {
+                ErrMsg = "такой выходной файл уже есть";
+                return false;
+            }
             
             // можно создать файл по директории?
             try

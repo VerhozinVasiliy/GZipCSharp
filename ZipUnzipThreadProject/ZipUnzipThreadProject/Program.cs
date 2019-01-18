@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using GZipLibrary;
 
 namespace ZipUnzipThreadProject
@@ -118,10 +119,31 @@ namespace ZipUnzipThreadProject
                 File.Delete(file);
             }
 
-            if (deleteTempDir)
+            if (!deleteTempDir)
+                return;
+
+
+            try
             {
-                Directory.Delete(app.TempPath);
+                DeleteTempDir(app.TempPath);
             }
+            catch (IOException)
+            {
+                Thread.Sleep(1000);
+                try
+                {
+                    DeleteTempDir(app.TempPath);
+                }
+                catch (IOException)
+                {
+                    //
+                }
+            }
+        }
+
+        private static void DeleteTempDir(string path)
+        {
+            Directory.Delete(path);
         }
     }
 }
